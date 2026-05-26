@@ -5,6 +5,8 @@ import '../models/auth_result.dart';
 import '../models/post.dart';
 import '../models/comment.dart';
 import '../models/gpu_process_result.dart';
+import '../models/user_profile.dart';
+import '../models/user_search_result.dart';
 
 class ApiService {
   final String baseUrl;
@@ -133,22 +135,56 @@ class ApiService {
   }
 
   // ── Perfil ────────────────────────────────────────────
+  Future<UserProfile> getMyProfile() async {
+    final res = await http.get(
+      Uri.parse('$baseUrl/api/v1/perfil/me'),
+      headers: headers,
+    );
+    if (res.statusCode != 200) throw Exception(_extractError(res.body));
+    return UserProfile.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+  }
+
   Future<Map<String, dynamic>> updateProfile({String? username}) async {
     final res = await http.put(
       Uri.parse('$baseUrl/api/v1/perfil/me'),
       headers: headers,
-      body: jsonEncode({
-        'username': username,
-      }),
+      body: jsonEncode({'username': username}),
     );
     if (res.statusCode != 200) throw Exception(_extractError(res.body));
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
-  Future<List<Post>> getUserPosts(String userId) async {
-    // TODO: GET $baseUrl/api/v1/perfil/$userId
-    await Future.delayed(const Duration(milliseconds: 400));
-    return _mockPosts().where((p) => p.userId == userId).toList();
+  // ── Búsqueda y follows ────────────────────────────────
+  Future<List<UserSearchResult>> searchUsers(String query) async {
+    final res = await http.get(
+      Uri.parse('$baseUrl/api/v1/perfil/search?q=${Uri.encodeComponent(query)}'),
+      headers: headers,
+    );
+    if (res.statusCode != 200) throw Exception(_extractError(res.body));
+    final list = jsonDecode(res.body) as List<dynamic>;
+    return list
+        .map((e) => UserSearchResult.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> followUser(String userId) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/api/v1/follow/$userId'),
+      headers: headers,
+    );
+    if (res.statusCode != 204 && res.statusCode != 200) {
+      throw Exception(_extractError(res.body));
+    }
+  }
+
+  Future<void> unfollowUser(String userId) async {
+    final res = await http.delete(
+      Uri.parse('$baseUrl/api/v1/follow/$userId'),
+      headers: headers,
+    );
+    if (res.statusCode != 204 && res.statusCode != 200) {
+      throw Exception(_extractError(res.body));
+    }
   }
 
   // ── Helpers ───────────────────────────────────────────

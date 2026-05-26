@@ -36,6 +36,21 @@ class Post {
         createdAt: createdAt,
       );
 
+  factory Post.fromPerfilJson(Map<String, dynamic> j) => Post(
+        id: j['id'].toString(),
+        userId: j['usuario_id'] as String? ?? '',
+        username: j['username'] as String? ?? '',
+        avatarUrl: j['avatar_url'] as String?,
+        imageUrl: j['imagen_url'] as String? ?? '',
+        caption: j['descripcion'] as String?,
+        likesCount: (j['likes_count'] as num?)?.toInt() ?? 0,
+        commentsCount: (j['comentarios_count'] as num?)?.toInt() ?? 0,
+        isLiked: j['is_liked'] as bool? ?? false,
+        createdAt: j['creado_en'] != null
+            ? DateTime.parse(j['creado_en'] as String)
+            : DateTime.now(),
+      );
+
   factory Post.fromJson(Map<String, dynamic> j) => Post(
         id: j['id'] as String,
         userId: j['user_id'] as String,

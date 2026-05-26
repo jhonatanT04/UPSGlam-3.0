@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../feed/feed_screen.dart';
 import '../profile/profile_screen.dart';
+import '../search/search_screen.dart';
 import '../upload/upload_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -16,6 +17,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   static const _screens = [
     FeedScreen(),
+    SearchScreen(),
     UploadScreen(),
     ProfileScreen(),
   ];
@@ -38,25 +40,32 @@ class _HomeScreenState extends State<HomeScreen> {
               label: 'Inicio',
             ),
             NavigationDestination(
+              icon: Icon(
+                _tab == 1 ? Icons.search : Icons.search_outlined,
+                color: _tab == 1 ? AppTheme.navy : null,
+              ),
+              label: 'Buscar',
+            ),
+            NavigationDestination(
               icon: Container(
                 padding: const EdgeInsets.all(7),
                 decoration: BoxDecoration(
-                  gradient: _tab == 1 ? AppTheme.upsGradient : null,
-                  border: _tab == 1
+                  gradient: _tab == 2 ? AppTheme.upsGradient : null,
+                  border: _tab == 2
                       ? null
                       : Border.all(color: AppTheme.textPrimary, width: 1.8),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
                   Icons.add,
-                  color: _tab == 1 ? AppTheme.gold : AppTheme.textPrimary,
+                  color: _tab == 2 ? AppTheme.gold : AppTheme.textPrimary,
                   size: 20,
                 ),
               ),
               label: 'Subir',
             ),
             NavigationDestination(
-              icon: Icon(_tab == 2 ? Icons.person : Icons.person_outline),
+              icon: Icon(_tab == 3 ? Icons.person : Icons.person_outline),
               label: 'Perfil',
             ),
           ],

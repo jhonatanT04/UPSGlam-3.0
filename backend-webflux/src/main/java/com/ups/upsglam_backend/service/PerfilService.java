@@ -6,6 +6,7 @@ import com.ups.upsglam_backend.dto.UpdatePerfilRequest;
 import com.ups.upsglam_backend.model.Perfil;
 import com.ups.upsglam_backend.model.Publicacion;
 import com.ups.upsglam_backend.repository.ComentarioRepository;
+import com.ups.upsglam_backend.repository.FollowRepository;
 import com.ups.upsglam_backend.repository.PerfilRepository;
 import com.ups.upsglam_backend.repository.PublicacionRepository;
 import org.springframework.stereotype.Service;
@@ -22,13 +23,16 @@ public class PerfilService {
     private final PerfilRepository perfilRepo;
     private final PublicacionRepository publicacionRepo;
     private final ComentarioRepository comentarioRepo;
+    private final FollowRepository followRepo;
 
     public PerfilService(PerfilRepository perfilRepo,
                          PublicacionRepository publicacionRepo,
-                         ComentarioRepository comentarioRepo) {
+                         ComentarioRepository comentarioRepo,
+                         FollowRepository followRepo) {
         this.perfilRepo      = perfilRepo;
         this.publicacionRepo = publicacionRepo;
         this.comentarioRepo  = comentarioRepo;
+        this.followRepo      = followRepo;
     }
 
     public Mono<Perfil> updatePerfil(UUID userId, UpdatePerfilRequest req) {
@@ -38,14 +42,19 @@ public class PerfilService {
     public Mono<PerfilResponse> getPerfil(UUID userId) {
         return Mono.zip(
                 perfilRepo.findById(userId),
-                publicacionRepo.findByUsuarioId(userId).collectList()
+                publicacionRepo.findByUsuarioId(userId).collectList(),
+                followRepo.countFollowers(userId),
+                followRepo.countFollowing(userId)
         ).flatMap(t -> {
-            var perfil       = t.getT1();
+            var perfil              = t.getT1();
             List<Publicacion> posts = t.getT2();
+            long seguidores         = t.getT3();
+            long seguidos           = t.getT4();
 
             if (posts.isEmpty()) {
                 return Mono.just(buildResponse(perfil, posts,
-                        Collections.emptyMap(), Collections.emptyMap()));
+                        Collections.emptyMap(), Collections.emptyMap(),
+                        seguidores, seguidos));
             }
 
             List<Long> ids = posts.stream().map(Publicacion::getId).toList();
@@ -53,14 +62,17 @@ public class PerfilService {
             return Mono.zip(
                     publicacionRepo.countLikesByIds(ids),
                     comentarioRepo.countByPublicacionIds(ids)
-            ).map(counts -> buildResponse(perfil, posts, counts.getT1(), counts.getT2()));
+            ).map(counts -> buildResponse(perfil, posts,
+                    counts.getT1(), counts.getT2(), seguidores, seguidos));
         });
     }
 
-    private PerfilResponse buildResponse(com.ups.upsglam_backend.model.Perfil perfil,
+    private PerfilResponse buildResponse(Perfil perfil,
                                           List<Publicacion> posts,
                                           Map<Long, Long> likes,
-                                          Map<Long, Long> comentarios) {
+                                          Map<Long, Long> comentarios,
+                                          long seguidores,
+                                          long seguidos) {
         long totalLikes = likes.values().stream().mapToLong(Long::longValue).sum();
 
         List<PublicacionResponse> postResponses = posts.stream()
@@ -85,6 +97,8 @@ public class PerfilService {
                 .avatarUrl(perfil.getAvatarUrl())
                 .publicacionesCount(posts.size())
                 .totalLikes(totalLikes)
+                .seguidores(seguidores)
+                .seguidos(seguidos)
                 .publicaciones(postResponses)
                 .build();
     }

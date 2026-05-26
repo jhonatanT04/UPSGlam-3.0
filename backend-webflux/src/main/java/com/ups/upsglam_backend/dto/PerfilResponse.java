@@ -23,5 +23,11 @@ public class PerfilResponse {
     @JsonProperty("total_likes")
     private long totalLikes;
 
+    @JsonProperty("seguidores")
+    private long seguidores;
+
+    @JsonProperty("seguidos")
+    private long seguidos;
+
     private List<PublicacionResponse> publicaciones;
 }

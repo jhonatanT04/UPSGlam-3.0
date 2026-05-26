@@ -3,6 +3,7 @@ package com.ups.upsglam_backend.repository;
 import com.ups.upsglam_backend.model.Perfil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.UUID;
@@ -46,6 +47,17 @@ public class PerfilRepository extends SupabaseRepository {
                 .retrieve()
                 .bodyToFlux(Perfil.class)
                 .next();
+    }
+
+    public Flux<Perfil> searchByUsernamePrefix(String query) {
+        return serviceClient.get()
+                .uri(u -> u.path("/perfiles")
+                        .queryParam("username", "ilike.*" + query + "*")
+                        .queryParam("select", "id,username,avatar_url")
+                        .queryParam("limit", "20")
+                        .build())
+                .retrieve()
+                .bodyToFlux(Perfil.class);
     }
 
     public Mono<Perfil> update(UUID id, String username, String avatarUrl) {

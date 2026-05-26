@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/post.dart';
+import '../../core/models/user_profile.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/providers/auth_provider.dart';
 import '../comments/comments_screen.dart';
@@ -18,7 +19,7 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final postsAsync = ref.watch(profilePostsProvider);
+    final profileAsync = ref.watch(myProfileProvider);
     final username = ref.watch(authProvider.select((s) => s.username)) ?? '';
 
     return Scaffold(
@@ -58,71 +59,85 @@ class ProfileScreen extends ConsumerWidget {
           child: Container(height: 0.5, color: AppTheme.inputBorder),
         ),
       ),
-      body: postsAsync.when(
+      body: profileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => const Center(
-            child: Text('Error al cargar perfil',
-                style: TextStyle(color: AppTheme.textSecondary))),
-        data: (posts) {
-          final totalLikes = posts.fold(0, (sum, p) => sum + p.likesCount);
-          final totalComments = posts.fold(0, (sum, p) => sum + p.commentsCount);
-
-          return CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(
-                child: _ProfileHeader(
-                  username: username,
-                  postsCount: posts.length,
-                  totalLikes: totalLikes,
-                  totalComments: totalComments,
-                ),
+        error: (e, _) => Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline,
+                  size: 48, color: AppTheme.textSecondary),
+              const SizedBox(height: 12),
+              const Text('Error al cargar perfil',
+                  style: TextStyle(color: AppTheme.textSecondary)),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: () => ref.invalidate(myProfileProvider),
+                child: const Text('Reintentar'),
               ),
-              SliverToBoxAdapter(
-                child: Container(height: 0.5, color: AppTheme.inputBorder),
-              ),
-              const SliverToBoxAdapter(child: _GridTabBar()),
-              if (posts.isEmpty)
-                const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.all(40),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          Icon(Icons.photo_camera_outlined,
-                              size: 52, color: AppTheme.textSecondary),
-                          SizedBox(height: 12),
-                          Text('Sin publicaciones aún',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w700, fontSize: 18)),
-                          SizedBox(height: 6),
-                          Text('Sube tu primera imagen con filtro GPU',
-                              style: TextStyle(
-                                  color: AppTheme.textSecondary, fontSize: 13)),
-                        ],
-                      ),
-                    ),
-                  ),
-                )
-              else
-                SliverGrid(
-                  delegate: SliverChildBuilderDelegate(
-                    (_, i) => _GridTile(
-                      post: posts[i],
-                      onTap: () => _showPostDetail(context, posts[i]),
-                    ),
-                    childCount: posts.length,
-                  ),
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 1.5,
-                    mainAxisSpacing: 1.5,
-                  ),
-                ),
             ],
-          );
-        },
+          ),
+        ),
+        data: (profile) => _ProfileBody(profile: profile),
       ),
+    );
+  }
+}
+
+class _ProfileBody extends ConsumerWidget {
+  final UserProfile profile;
+  const _ProfileBody({required this.profile});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: _ProfileHeader(profile: profile),
+        ),
+        SliverToBoxAdapter(
+          child: Container(height: 0.5, color: AppTheme.inputBorder),
+        ),
+        const SliverToBoxAdapter(child: _GridTabBar()),
+        if (profile.publicaciones.isEmpty)
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.all(40),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(Icons.photo_camera_outlined,
+                        size: 52, color: AppTheme.textSecondary),
+                    SizedBox(height: 12),
+                    Text('Sin publicaciones aún',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 18)),
+                    SizedBox(height: 6),
+                    Text('Sube tu primera imagen con filtro GPU',
+                        style: TextStyle(
+                            color: AppTheme.textSecondary, fontSize: 13)),
+                  ],
+                ),
+              ),
+            ),
+          )
+        else
+          SliverGrid(
+            delegate: SliverChildBuilderDelegate(
+              (_, i) => _GridTile(
+                post: profile.publicaciones[i],
+                onTap: () =>
+                    _showPostDetail(context, profile.publicaciones[i]),
+              ),
+              childCount: profile.publicaciones.length,
+            ),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 1.5,
+              mainAxisSpacing: 1.5,
+            ),
+          ),
+      ],
     );
   }
 
@@ -137,21 +152,12 @@ class ProfileScreen extends ConsumerWidget {
 }
 
 // ── Header ────────────────────────────────────────────
-class _ProfileHeader extends StatelessWidget {
-  final String username;
-  final int postsCount;
-  final int totalLikes;
-  final int totalComments;
-
-  const _ProfileHeader({
-    required this.username,
-    required this.postsCount,
-    required this.totalLikes,
-    required this.totalComments,
-  });
+class _ProfileHeader extends ConsumerWidget {
+  final UserProfile profile;
+  const _ProfileHeader({required this.profile});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
       child: Column(
@@ -168,14 +174,21 @@ class _ProfileHeader extends StatelessWidget {
                 child: CircleAvatar(
                   radius: 42,
                   backgroundColor: AppTheme.background,
-                  child: Text(
-                    username.isNotEmpty ? username[0].toUpperCase() : '?',
-                    style: const TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.w900,
-                      color: AppTheme.navy,
-                    ),
-                  ),
+                  backgroundImage: profile.avatarUrl != null
+                      ? NetworkImage(profile.avatarUrl!)
+                      : null,
+                  child: profile.avatarUrl == null
+                      ? Text(
+                          profile.username.isNotEmpty
+                              ? profile.username[0].toUpperCase()
+                              : '?',
+                          style: const TextStyle(
+                            fontSize: 30,
+                            fontWeight: FontWeight.w900,
+                            color: AppTheme.navy,
+                          ),
+                        )
+                      : null,
                 ),
               ),
               const SizedBox(width: 20),
@@ -183,33 +196,39 @@ class _ProfileHeader extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _StatCol(value: postsCount, label: 'Posts'),
-                    _StatCol(value: totalLikes, label: 'Me gusta'),
-                    _StatCol(value: totalComments, label: 'Comentarios'),
+                    _StatCol(
+                        value: profile.publicacionesCount, label: 'Posts'),
+                    _StatCol(
+                        value: profile.seguidores, label: 'Seguidores'),
+                    _StatCol(
+                        value: profile.seguidos, label: 'Siguiendo'),
                   ],
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          Text(username,
-              style:
-                  const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+          Text(profile.username,
+              style: const TextStyle(
+                  fontWeight: FontWeight.w800, fontSize: 15)),
           const SizedBox(height: 14),
           OutlinedButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => const EditProfileScreen()),
-            ),
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const EditProfileScreen()),
+              );
+              ref.invalidate(myProfileProvider);
+            },
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(double.infinity, 34),
               side: const BorderSide(color: AppTheme.inputBorder),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
               foregroundColor: AppTheme.textPrimary,
-              textStyle:
-                  const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              textStyle: const TextStyle(
+                  fontWeight: FontWeight.w600, fontSize: 13),
             ),
             child: const Text('Editar perfil'),
           ),
@@ -229,8 +248,7 @@ class _StatCol extends StatelessWidget {
     return Column(
       children: [
         Text('$value',
-            style: const TextStyle(
-                fontSize: 17, fontWeight: FontWeight.w800)),
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
         Text(label,
             style: const TextStyle(
                 color: AppTheme.textSecondary, fontSize: 11)),
@@ -286,13 +304,12 @@ class _GridTile extends StatelessWidget {
             loadingBuilder: (_, child, progress) => progress == null
                 ? child
                 : Container(color: AppTheme.background),
-            errorBuilder: (context, e, s) => Container(
+            errorBuilder: (context2, err, st) => Container(
               color: AppTheme.background,
               child: const Icon(Icons.image_outlined,
                   color: AppTheme.textSecondary),
             ),
           ),
-          // Overlay de likes al hover (siempre visible sutilmente si isLiked)
           if (post.isLiked)
             Positioned(
               bottom: 4,
@@ -331,7 +348,6 @@ class _PostDetailSheet extends StatelessWidget {
         ),
         child: Column(
           children: [
-            // Handle
             Container(
               width: 36,
               height: 4,
@@ -344,7 +360,6 @@ class _PostDetailSheet extends StatelessWidget {
               child: ListView(
                 controller: ctrl,
                 children: [
-                  // Header
                   Padding(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 8),
@@ -360,7 +375,9 @@ class _PostDetailSheet extends StatelessWidget {
                             radius: 16,
                             backgroundColor: AppTheme.background,
                             child: Text(
-                              post.username[0].toUpperCase(),
+                              post.username.isNotEmpty
+                                  ? post.username[0].toUpperCase()
+                                  : '?',
                               style: const TextStyle(
                                   color: AppTheme.navy,
                                   fontWeight: FontWeight.bold,
@@ -376,12 +393,10 @@ class _PostDetailSheet extends StatelessWidget {
                       ],
                     ),
                   ),
-                  // Imagen
                   AspectRatio(
                     aspectRatio: 1,
                     child: Image.network(post.imageUrl, fit: BoxFit.cover),
                   ),
-                  // Acciones
                   Padding(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 8),
