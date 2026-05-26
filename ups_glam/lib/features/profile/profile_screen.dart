@@ -1,0 +1,420 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/models/post.dart';
+import '../../core/theme/app_theme.dart';
+import '../comments/comments_screen.dart';
+import 'profile_provider.dart';
+
+class ProfileScreen extends ConsumerWidget {
+  const ProfileScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final postsAsync = ref.watch(profilePostsProvider);
+
+    return Scaffold(
+      backgroundColor: AppTheme.white,
+      appBar: AppBar(
+        title: const Text(
+          currentUsername,
+          style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: -0.3),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add_box_outlined, color: AppTheme.textPrimary),
+            onPressed: () {},
+          ),
+          IconButton(
+            icon: const Icon(Icons.menu, color: AppTheme.textPrimary),
+            onPressed: () {},
+          ),
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(0.5),
+          child: Container(height: 0.5, color: AppTheme.inputBorder),
+        ),
+      ),
+      body: postsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => const Center(
+            child: Text('Error al cargar perfil',
+                style: TextStyle(color: AppTheme.textSecondary))),
+        data: (posts) {
+          final totalLikes = posts.fold(0, (sum, p) => sum + p.likesCount);
+          final totalComments = posts.fold(0, (sum, p) => sum + p.commentsCount);
+
+          return CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: _ProfileHeader(
+                  postsCount: posts.length,
+                  totalLikes: totalLikes,
+                  totalComments: totalComments,
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Container(height: 0.5, color: AppTheme.inputBorder),
+              ),
+              const SliverToBoxAdapter(child: _GridTabBar()),
+              if (posts.isEmpty)
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.all(40),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(Icons.photo_camera_outlined,
+                              size: 52, color: AppTheme.textSecondary),
+                          SizedBox(height: 12),
+                          Text('Sin publicaciones aún',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w700, fontSize: 18)),
+                          SizedBox(height: 6),
+                          Text('Sube tu primera imagen con filtro GPU',
+                              style: TextStyle(
+                                  color: AppTheme.textSecondary, fontSize: 13)),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              else
+                SliverGrid(
+                  delegate: SliverChildBuilderDelegate(
+                    (_, i) => _GridTile(
+                      post: posts[i],
+                      onTap: () => _showPostDetail(context, posts[i]),
+                    ),
+                    childCount: posts.length,
+                  ),
+                  gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 1.5,
+                    mainAxisSpacing: 1.5,
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showPostDetail(BuildContext context, Post post) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _PostDetailSheet(post: post),
+    );
+  }
+}
+
+// ── Header ────────────────────────────────────────────
+class _ProfileHeader extends StatelessWidget {
+  final int postsCount;
+  final int totalLikes;
+  final int totalComments;
+
+  const _ProfileHeader({
+    required this.postsCount,
+    required this.totalLikes,
+    required this.totalComments,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(2.5),
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: AppTheme.upsGradient,
+                ),
+                child: CircleAvatar(
+                  radius: 42,
+                  backgroundColor: AppTheme.background,
+                  child: Text(
+                    currentUsername[0].toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w900,
+                      color: AppTheme.navy,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _StatCol(value: postsCount, label: 'Posts'),
+                    _StatCol(value: totalLikes, label: 'Me gusta'),
+                    _StatCol(value: totalComments, label: 'Comentarios'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Text(currentUsername,
+              style:
+                  TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+          const SizedBox(height: 14),
+          OutlinedButton(
+            onPressed: () {},
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 34),
+              side: const BorderSide(color: AppTheme.inputBorder),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+              foregroundColor: AppTheme.textPrimary,
+              textStyle:
+                  const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            ),
+            child: const Text('Editar perfil'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatCol extends StatelessWidget {
+  final int value;
+  final String label;
+  const _StatCol({required this.value, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text('$value',
+            style: const TextStyle(
+                fontSize: 17, fontWeight: FontWeight.w800)),
+        Text(label,
+            style: const TextStyle(
+                color: AppTheme.textSecondary, fontSize: 11)),
+      ],
+    );
+  }
+}
+
+// ── Tab bar ───────────────────────────────────────────
+class _GridTabBar extends StatelessWidget {
+  const _GridTabBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppTheme.white,
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              decoration: const BoxDecoration(
+                border: Border(
+                    bottom: BorderSide(color: AppTheme.navy, width: 1.5)),
+              ),
+              child:
+                  const Icon(Icons.grid_on, color: AppTheme.navy, size: 22),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Grid tile ─────────────────────────────────────────
+class _GridTile extends StatelessWidget {
+  final Post post;
+  final VoidCallback onTap;
+  const _GridTile({required this.post, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.network(
+            post.imageUrl,
+            fit: BoxFit.cover,
+            loadingBuilder: (_, child, progress) => progress == null
+                ? child
+                : Container(color: AppTheme.background),
+            errorBuilder: (context, e, s) => Container(
+              color: AppTheme.background,
+              child: const Icon(Icons.image_outlined,
+                  color: AppTheme.textSecondary),
+            ),
+          ),
+          // Overlay de likes al hover (siempre visible sutilmente si isLiked)
+          if (post.isLiked)
+            Positioned(
+              bottom: 4,
+              right: 4,
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Icon(Icons.favorite,
+                    color: AppTheme.like, size: 12),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Detalle del post (bottom sheet) ──────────────────
+class _PostDetailSheet extends StatelessWidget {
+  final Post post;
+  const _PostDetailSheet({required this.post});
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.88,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (_, ctrl) => Container(
+        decoration: const BoxDecoration(
+          color: AppTheme.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        child: Column(
+          children: [
+            // Handle
+            Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(top: 10, bottom: 8),
+              decoration: BoxDecoration(
+                  color: AppTheme.inputBorder,
+                  borderRadius: BorderRadius.circular(2)),
+            ),
+            Expanded(
+              child: ListView(
+                controller: ctrl,
+                children: [
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: AppTheme.upsGradient,
+                          ),
+                          child: CircleAvatar(
+                            radius: 16,
+                            backgroundColor: AppTheme.background,
+                            child: Text(
+                              post.username[0].toUpperCase(),
+                              style: const TextStyle(
+                                  color: AppTheme.navy,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(post.username,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13.5)),
+                      ],
+                    ),
+                  ),
+                  // Imagen
+                  AspectRatio(
+                    aspectRatio: 1,
+                    child: Image.network(post.imageUrl, fit: BoxFit.cover),
+                  ),
+                  // Acciones
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    child: Row(
+                      children: [
+                        Icon(
+                          post.isLiked
+                              ? Icons.favorite
+                              : Icons.favorite_border,
+                          color: post.isLiked
+                              ? AppTheme.like
+                              : AppTheme.textPrimary,
+                          size: 26,
+                        ),
+                        const SizedBox(width: 4),
+                        Text('${post.likesCount}',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w700)),
+                        const SizedBox(width: 14),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      CommentsScreen(postId: post.id)),
+                            );
+                          },
+                          child: const Icon(Icons.chat_bubble_outline,
+                              size: 24, color: AppTheme.textPrimary),
+                        ),
+                        const SizedBox(width: 4),
+                        Text('${post.commentsCount}',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  ),
+                  if (post.caption != null && post.caption!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+                      child: RichText(
+                        text: TextSpan(
+                          style: const TextStyle(
+                              color: AppTheme.textPrimary,
+                              fontSize: 13.5,
+                              height: 1.3),
+                          children: [
+                            TextSpan(
+                                text: '${post.username} ',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700)),
+                            TextSpan(text: post.caption),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
