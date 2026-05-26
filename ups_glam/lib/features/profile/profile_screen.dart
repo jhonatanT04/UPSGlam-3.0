@@ -2,31 +2,55 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/post.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/providers/auth_provider.dart';
 import '../comments/comments_screen.dart';
+import 'edit_profile_screen.dart';
 import 'profile_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
+  Future<void> _logout(BuildContext context, WidgetRef ref) async {
+    await ref.read(authProvider.notifier).logout();
+    if (!context.mounted) return;
+    Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final postsAsync = ref.watch(profilePostsProvider);
+    final username = ref.watch(authProvider.select((s) => s.username)) ?? '';
 
     return Scaffold(
       backgroundColor: AppTheme.white,
       appBar: AppBar(
-        title: const Text(
-          currentUsername,
-          style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: -0.3),
+        title: Text(
+          username.isNotEmpty ? username : 'Perfil',
+          style: const TextStyle(fontWeight: FontWeight.w800, letterSpacing: -0.3),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.add_box_outlined, color: AppTheme.textPrimary),
             onPressed: () {},
           ),
-          IconButton(
+          PopupMenuButton<String>(
             icon: const Icon(Icons.menu, color: AppTheme.textPrimary),
-            onPressed: () {},
+            onSelected: (value) {
+              if (value == 'logout') _logout(context, ref);
+            },
+            itemBuilder: (_) => [
+              const PopupMenuItem(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout, size: 20, color: Colors.red),
+                    SizedBox(width: 10),
+                    Text('Cerrar sesión',
+                        style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
         bottom: PreferredSize(
@@ -47,6 +71,7 @@ class ProfileScreen extends ConsumerWidget {
             slivers: [
               SliverToBoxAdapter(
                 child: _ProfileHeader(
+                  username: username,
                   postsCount: posts.length,
                   totalLikes: totalLikes,
                   totalComments: totalComments,
@@ -113,11 +138,13 @@ class ProfileScreen extends ConsumerWidget {
 
 // ── Header ────────────────────────────────────────────
 class _ProfileHeader extends StatelessWidget {
+  final String username;
   final int postsCount;
   final int totalLikes;
   final int totalComments;
 
   const _ProfileHeader({
+    required this.username,
     required this.postsCount,
     required this.totalLikes,
     required this.totalComments,
@@ -142,7 +169,7 @@ class _ProfileHeader extends StatelessWidget {
                   radius: 42,
                   backgroundColor: AppTheme.background,
                   child: Text(
-                    currentUsername[0].toUpperCase(),
+                    username.isNotEmpty ? username[0].toUpperCase() : '?',
                     style: const TextStyle(
                       fontSize: 30,
                       fontWeight: FontWeight.w900,
@@ -165,12 +192,16 @@ class _ProfileHeader extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          const Text(currentUsername,
+          Text(username,
               style:
-                  TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                  const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
           const SizedBox(height: 14),
           OutlinedButton(
-            onPressed: () {},
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => const EditProfileScreen()),
+            ),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(double.infinity, 34),
               side: const BorderSide(color: AppTheme.inputBorder),

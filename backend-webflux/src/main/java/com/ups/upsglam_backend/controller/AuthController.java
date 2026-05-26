@@ -1,6 +1,7 @@
 package com.ups.upsglam_backend.controller;
 
 import com.ups.upsglam_backend.dto.AuthResponse;
+import com.ups.upsglam_backend.dto.ForgotPasswordRequest;
 import com.ups.upsglam_backend.dto.LoginRequest;
 import com.ups.upsglam_backend.dto.RegisterRequest;
 import com.ups.upsglam_backend.service.AuthService;
@@ -29,6 +30,12 @@ public class AuthController {
     @PostMapping("/login")
     public Mono<AuthResponse> login(@RequestBody LoginRequest req) {
         return authService.login(req);
+    }
+
+    @PostMapping("/forgot-password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public Mono<Void> forgotPassword(@RequestBody ForgotPasswordRequest req) {
+        return authService.forgotPassword(req);
     }
 
     @PostMapping("/logout")

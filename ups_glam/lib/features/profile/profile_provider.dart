@@ -1,11 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/post.dart';
-import '../feed/feed_provider.dart';
-
-// En el futuro este ID vendrá de Supabase Auth
-const currentUserId = 'user1';
-const currentUsername = 'maria_ups';
+import '../../core/providers/auth_provider.dart';
 
 final profilePostsProvider =
-    FutureProvider.autoDispose<List<Post>>((ref) =>
-        ref.read(apiServiceProvider).getUserPosts(currentUserId));
+    FutureProvider.autoDispose<List<Post>>((ref) {
+  final userId = ref.watch(authProvider.select((s) => s.userId)) ?? '';
+  return ref.read(apiServiceProvider).getUserPosts(userId);
+});

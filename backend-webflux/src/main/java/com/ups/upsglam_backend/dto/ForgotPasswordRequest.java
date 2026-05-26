@@ -3,7 +3,6 @@ package com.ups.upsglam_backend.dto;
 import lombok.Data;
 
 @Data
-public class LoginRequest {
+public class ForgotPasswordRequest {
     private String identifier; // email o username
-    private String password;
 }

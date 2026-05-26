@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import '../models/auth_result.dart';
 import '../models/post.dart';
 import '../models/comment.dart';
 import '../models/gpu_process_result.dart';
@@ -15,6 +16,46 @@ class ApiService {
         'Content-Type': 'application/json',
         if (authToken != null) 'Authorization': 'Bearer $authToken',
       };
+
+  // ── Auth ──────────────────────────────────────────────
+  Future<AuthResult> login(String identifier, String password) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/api/v1/auth/login'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode({'identifier': identifier, 'password': password}),
+    );
+    if (res.statusCode != 200) throw Exception(_extractError(res.body));
+    return AuthResult.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+  }
+
+  Future<AuthResult> register(String email, String password) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/api/v1/auth/register'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'password': password}),
+    );
+    if (res.statusCode != 201) throw Exception(_extractError(res.body));
+    return AuthResult.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+  }
+
+  Future<void> forgotPassword(String identifier) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/api/v1/auth/forgot-password'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode({'identifier': identifier}),
+    );
+    if (res.statusCode != 204 && res.statusCode != 200) {
+      throw Exception(_extractError(res.body));
+    }
+  }
+
+  Future<void> logout() async {
+    if (authToken == null) return;
+    await http.post(
+      Uri.parse('$baseUrl/api/v1/auth/logout'),
+      headers: headers,
+    );
+  }
 
   // ── Procesamiento GPU ─────────────────────────────────
   Future<GpuProcessResult> processImage(
@@ -47,19 +88,19 @@ class ApiService {
 
   // ── Likes ─────────────────────────────────────────────
   Future<void> toggleLike(String postId) async {
-    // TODO: POST $baseUrl/api/v1/posts/$postId/like
+    // TODO: POST $baseUrl/api/v1/publicaciones/$postId/like
     await Future.delayed(const Duration(milliseconds: 150));
   }
 
   // ── Comments ──────────────────────────────────────────
   Future<List<Comment>> getComments(String postId) async {
-    // TODO: GET $baseUrl/api/v1/posts/$postId/comments
+    // TODO: GET $baseUrl/api/v1/publicaciones/$postId/comentarios
     await Future.delayed(const Duration(milliseconds: 400));
     return _mockComments(postId);
   }
 
   Future<Comment> addComment(String postId, String content) async {
-    // TODO: POST $baseUrl/api/v1/posts/$postId/comments body: {"content": content}
+    // TODO: POST $baseUrl/api/v1/publicaciones/$postId/comentarios
     await Future.delayed(const Duration(milliseconds: 300));
     return Comment(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -76,7 +117,7 @@ class ApiService {
     required String imageUrl,
     String? caption,
   }) async {
-    // TODO: POST $baseUrl/api/v1/posts body: {"image_url": imageUrl, "caption": caption}
+    // TODO: POST $baseUrl/api/v1/publicaciones
     await Future.delayed(const Duration(milliseconds: 400));
     return Post(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -92,10 +133,35 @@ class ApiService {
   }
 
   // ── Perfil ────────────────────────────────────────────
+  Future<Map<String, dynamic>> updateProfile({String? username}) async {
+    final res = await http.put(
+      Uri.parse('$baseUrl/api/v1/perfil/me'),
+      headers: headers,
+      body: jsonEncode({
+        'username': username,
+      }),
+    );
+    if (res.statusCode != 200) throw Exception(_extractError(res.body));
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
   Future<List<Post>> getUserPosts(String userId) async {
-    // TODO: GET $baseUrl/api/v1/users/$userId/posts
+    // TODO: GET $baseUrl/api/v1/perfil/$userId
     await Future.delayed(const Duration(milliseconds: 400));
     return _mockPosts().where((p) => p.userId == userId).toList();
+  }
+
+  // ── Helpers ───────────────────────────────────────────
+  String _extractError(String body) {
+    try {
+      final json = jsonDecode(body) as Map<String, dynamic>;
+      return json['message'] as String? ??
+          json['msg'] as String? ??
+          json['error'] as String? ??
+          'Error desconocido';
+    } catch (_) {
+      return body.isNotEmpty ? body : 'Error desconocido';
+    }
   }
 }
 

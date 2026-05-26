@@ -2,6 +2,8 @@ package com.ups.upsglam_backend.service;
 
 import com.ups.upsglam_backend.dto.PerfilResponse;
 import com.ups.upsglam_backend.dto.PublicacionResponse;
+import com.ups.upsglam_backend.dto.UpdatePerfilRequest;
+import com.ups.upsglam_backend.model.Perfil;
 import com.ups.upsglam_backend.model.Publicacion;
 import com.ups.upsglam_backend.repository.ComentarioRepository;
 import com.ups.upsglam_backend.repository.PerfilRepository;
@@ -27,6 +29,10 @@ public class PerfilService {
         this.perfilRepo      = perfilRepo;
         this.publicacionRepo = publicacionRepo;
         this.comentarioRepo  = comentarioRepo;
+    }
+
+    public Mono<Perfil> updatePerfil(UUID userId, UpdatePerfilRequest req) {
+        return perfilRepo.update(userId, req.getUsername(), req.getAvatarUrl());
     }
 
     public Mono<PerfilResponse> getPerfil(UUID userId) {

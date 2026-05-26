@@ -1,34 +1,65 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/providers/auth_provider.dart';
+import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
   static const route = '/login';
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-  final emailCtrl    = TextEditingController();
-  final passwordCtrl = TextEditingController();
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  final identifierCtrl = TextEditingController();
+  final passwordCtrl   = TextEditingController();
   bool obscure = true;
   bool loading = false;
 
   @override
   void dispose() {
-    emailCtrl.dispose();
+    identifierCtrl.dispose();
     passwordCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> login() async {
+  Future<void> _login() async {
+    final identifier = identifierCtrl.text.trim();
+    final password   = passwordCtrl.text;
+    if (identifier.isEmpty || password.isEmpty) {
+      _showError('Completa todos los campos');
+      return;
+    }
     setState(() => loading = true);
-    await Future.delayed(const Duration(seconds: 1));
-    setState(() => loading = false);
-    if (!mounted) return;
-    Navigator.pushReplacementNamed(context, '/home');
+    try {
+      await ref.read(authProvider.notifier).login(identifier, password);
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil('/home', (_) => false);
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString().toLowerCase();
+      if (msg.contains('invalid') || msg.contains('credencial') ||
+          msg.contains('401') || msg.contains('unauthorized')) {
+        _showError('Usuario/correo o contraseña inválidos');
+      } else {
+        _showError(e.toString().replaceAll('Exception: ', ''));
+      }
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  void _showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
@@ -48,22 +79,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 child: Column(
                   children: [
-                    // Logo UPS simulado con el globe
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppTheme.white.withValues(alpha: 0.15),
-                        border: Border.all(color: AppTheme.gold, width: 2.5),
-                      ),
-                      child: const Icon(
-                        Icons.language,
-                        size: 44,
-                        color: AppTheme.gold,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
                     const Text(
                       'UPSGlam',
                       style: TextStyle(
@@ -118,11 +133,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 28),
 
                     TextField(
-                      controller: emailCtrl,
-                      keyboardType: TextInputType.emailAddress,
+                      controller: identifierCtrl,
+                      keyboardType: TextInputType.text,
+                      autocorrect: false,
                       decoration: const InputDecoration(
-                        labelText: 'Correo institucional',
-                        prefixIcon: Icon(Icons.email_outlined),
+                        labelText: 'Usuario o correo',
+                        prefixIcon: Icon(Icons.person_outline),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -130,6 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextField(
                       controller: passwordCtrl,
                       obscureText: obscure,
+                      onSubmitted: (_) => _login(),
                       decoration: InputDecoration(
                         labelText: 'Contraseña',
                         prefixIcon: const Icon(Icons.lock_outline),
@@ -147,7 +164,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: () {},
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const ForgotPasswordScreen()),
+                        ),
                         child: const Text('¿Olvidaste tu contraseña?',
                             style: TextStyle(fontSize: 13)),
                       ),
@@ -155,7 +176,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 8),
 
                     ElevatedButton(
-                      onPressed: loading ? null : login,
+                      onPressed: loading ? null : _login,
                       child: loading
                           ? const SizedBox(
                               height: 20,
@@ -166,7 +187,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Divisor
                     Row(children: [
                       const Expanded(child: Divider()),
                       Padding(

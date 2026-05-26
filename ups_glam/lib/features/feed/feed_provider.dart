@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/post.dart';
-import '../../core/services/api_service.dart';
+import '../../core/providers/auth_provider.dart';
 
-final apiServiceProvider = Provider((ref) => ApiService());
+export '../../core/providers/auth_provider.dart' show apiServiceProvider;
 
 final feedProvider =
     AsyncNotifierProvider<FeedNotifier, List<Post>>(FeedNotifier.new);

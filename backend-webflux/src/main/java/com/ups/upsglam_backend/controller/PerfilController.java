@@ -1,6 +1,8 @@
 package com.ups.upsglam_backend.controller;
 
 import com.ups.upsglam_backend.dto.PerfilResponse;
+import com.ups.upsglam_backend.dto.UpdatePerfilRequest;
+import com.ups.upsglam_backend.model.Perfil;
 import com.ups.upsglam_backend.service.PerfilService;
 import com.ups.upsglam_backend.util.JwtUtils;
 import org.springframework.web.bind.annotation.*;
@@ -31,5 +33,14 @@ public class PerfilController {
             @RequestHeader("Authorization") String bearer) {
         UUID userId = JwtUtils.extractUserId(bearer);
         return perfilService.getPerfil(userId);
+    }
+
+    /** Actualiza el perfil del usuario autenticado. */
+    @PutMapping("/perfil/me")
+    public Mono<Perfil> updateMyPerfil(
+            @RequestBody UpdatePerfilRequest req,
+            @RequestHeader("Authorization") String bearer) {
+        UUID userId = JwtUtils.extractUserId(bearer);
+        return perfilService.updatePerfil(userId, req);
     }
 }

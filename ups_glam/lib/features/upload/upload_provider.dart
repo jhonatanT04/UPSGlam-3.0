@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/gpu_process_result.dart';
 import '../../core/services/api_service.dart';
-import '../feed/feed_provider.dart';
+import '../../core/providers/auth_provider.dart';
 
 enum UploadStep { idle, processing, done, error }
 
