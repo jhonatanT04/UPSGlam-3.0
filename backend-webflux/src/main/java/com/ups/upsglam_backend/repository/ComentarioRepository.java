@@ -56,8 +56,8 @@ public class ComentarioRepository extends SupabaseRepository {
                 .onErrorReturn(Map.of());
     }
 
-    public Mono<Comentario> save(Comentario comentario, String userJwt) {
-        return userClient(userJwt).post()
+    public Mono<Comentario> save(Comentario comentario) {
+        return serviceClient.post()
                 .uri("/comentarios")
                 .header("Prefer", "return=representation")
                 .bodyValue(comentario)

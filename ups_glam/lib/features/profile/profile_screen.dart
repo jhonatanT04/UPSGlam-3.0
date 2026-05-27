@@ -5,6 +5,8 @@ import '../../core/models/user_profile.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/providers/auth_provider.dart';
 import '../comments/comments_screen.dart';
+import '../feed/feed_provider.dart';
+import '../home/home_screen.dart';
 import 'edit_profile_screen.dart';
 import 'profile_provider.dart';
 
@@ -32,7 +34,7 @@ class ProfileScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.add_box_outlined, color: AppTheme.textPrimary),
-            onPressed: () {},
+            onPressed: () => ref.read(homeTabProvider.notifier).state = 2,
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.menu, color: AppTheme.textPrimary),
@@ -331,12 +333,56 @@ class _GridTile extends StatelessWidget {
 }
 
 // ── Detalle del post (bottom sheet) ──────────────────
-class _PostDetailSheet extends StatelessWidget {
+class _PostDetailSheet extends ConsumerStatefulWidget {
   final Post post;
   const _PostDetailSheet({required this.post});
 
   @override
+  ConsumerState<_PostDetailSheet> createState() => _PostDetailSheetState();
+}
+
+class _PostDetailSheetState extends ConsumerState<_PostDetailSheet> {
+  late bool _isLiked;
+  late int _likesCount;
+  bool _liking = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final feedPosts = ref.read(feedProvider).valueOrNull ?? [];
+    final feedPost = feedPosts.firstWhere(
+      (p) => p.id == widget.post.id,
+      orElse: () => widget.post,
+    );
+    _isLiked = feedPost.isLiked;
+    _likesCount = feedPost.likesCount;
+  }
+
+  Future<void> _toggleLike() async {
+    if (_liking) return;
+    final wasLiked = _isLiked;
+    setState(() {
+      _liking = true;
+      _isLiked = !_isLiked;
+      _likesCount += _isLiked ? 1 : -1;
+    });
+    try {
+      await ref.read(feedProvider.notifier).toggleLike(widget.post.id);
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isLiked = wasLiked;
+          _likesCount += wasLiked ? 1 : -1;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _liking = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final post = widget.post;
     return DraggableScrollableSheet(
       initialChildSize: 0.88,
       minChildSize: 0.5,
@@ -374,15 +420,20 @@ class _PostDetailSheet extends StatelessWidget {
                           child: CircleAvatar(
                             radius: 16,
                             backgroundColor: AppTheme.background,
-                            child: Text(
-                              post.username.isNotEmpty
-                                  ? post.username[0].toUpperCase()
-                                  : '?',
-                              style: const TextStyle(
-                                  color: AppTheme.navy,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12),
-                            ),
+                            backgroundImage: post.avatarUrl != null
+                                ? NetworkImage(post.avatarUrl!)
+                                : null,
+                            child: post.avatarUrl == null
+                                ? Text(
+                                    post.username.isNotEmpty
+                                        ? post.username[0].toUpperCase()
+                                        : '?',
+                                    style: const TextStyle(
+                                        color: AppTheme.navy,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12),
+                                  )
+                                : null,
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -399,20 +450,27 @@ class _PostDetailSheet extends StatelessWidget {
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
+                        horizontal: 8, vertical: 6),
                     child: Row(
                       children: [
-                        Icon(
-                          post.isLiked
-                              ? Icons.favorite
-                              : Icons.favorite_border,
-                          color: post.isLiked
-                              ? AppTheme.like
-                              : AppTheme.textPrimary,
-                          size: 26,
+                        GestureDetector(
+                          onTap: _toggleLike,
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 180),
+                            child: Icon(
+                              _isLiked
+                                  ? Icons.favorite
+                                  : Icons.favorite_border,
+                              key: ValueKey(_isLiked),
+                              color: _isLiked
+                                  ? AppTheme.like
+                                  : AppTheme.textPrimary,
+                              size: 26,
+                            ),
+                          ),
                         ),
                         const SizedBox(width: 4),
-                        Text('${post.likesCount}',
+                        Text('$_likesCount',
                             style: const TextStyle(
                                 fontWeight: FontWeight.w700)),
                         const SizedBox(width: 14),
@@ -438,7 +496,7 @@ class _PostDetailSheet extends StatelessWidget {
                   ),
                   if (post.caption != null && post.caption!.isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+                      padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
                       child: RichText(
                         text: TextSpan(
                           style: const TextStyle(

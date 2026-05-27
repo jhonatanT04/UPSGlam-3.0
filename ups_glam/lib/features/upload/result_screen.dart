@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/gpu_process_result.dart';
 import '../../core/theme/app_theme.dart';
 import '../feed/feed_provider.dart';
+import '../home/home_screen.dart';
+import '../profile/profile_provider.dart';
 
 class ResultScreen extends ConsumerStatefulWidget {
   final GpuProcessResult result;
@@ -33,10 +35,27 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
                 : _captionCtrl.text.trim(),
           );
       await ref.read(feedProvider.notifier).addNewPost(post);
+      ref.invalidate(myProfileProvider);
       if (!mounted) return;
-      Navigator.of(context)
-        ..pop()   // cierra ResultScreen
-        ..pop();  // cierra UploadScreen → vuelve al feed
+      final messenger = ScaffoldMessenger.of(context);
+      Navigator.of(context).pop();
+      ref.read(homeTabProvider.notifier).state = 0;
+      messenger.showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.white, size: 18),
+              SizedBox(width: 8),
+              Text('¡Publicación exitosa!'),
+            ],
+          ),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10)),
+          duration: const Duration(seconds: 2),
+        ),
+      );
     } catch (e) {
       setState(() => _publishing = false);
       ScaffoldMessenger.of(context).showSnackBar(

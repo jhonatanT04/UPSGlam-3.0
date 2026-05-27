@@ -33,24 +33,22 @@ public class ComentarioService {
                                                    ComentarioRequest req,
                                                    String bearerHeader) {
         UUID userId = JwtUtils.extractUserId(bearerHeader);
-        String jwt  = JwtUtils.extractToken(bearerHeader);
 
         Comentario c = new Comentario();
         c.setPublicacionId(publicacionId);
         c.setUsuarioId(userId);
         c.setTexto(req.getTexto());
 
-        return comentarioRepo.save(c, jwt).map(this::toResponse);
+        return comentarioRepo.save(c).map(this::toResponse);
     }
 
     public Mono<Void> toggleLike(Long publicacionId, String bearerHeader) {
         UUID userId = JwtUtils.extractUserId(bearerHeader);
-        String jwt  = JwtUtils.extractToken(bearerHeader);
 
         return likeRepo.exists(publicacionId, userId)
                 .flatMap(exists -> exists
-                        ? likeRepo.delete(publicacionId, userId, jwt)
-                        : likeRepo.save(publicacionId, userId, jwt));
+                        ? likeRepo.delete(publicacionId, userId)
+                        : likeRepo.save(publicacionId, userId));
     }
 
     private ComentarioResponse toResponse(Comentario c) {

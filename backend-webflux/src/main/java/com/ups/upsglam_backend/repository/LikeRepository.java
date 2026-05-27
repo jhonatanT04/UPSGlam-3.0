@@ -29,11 +29,11 @@ public class LikeRepository extends SupabaseRepository {
                 .hasElements();
     }
 
-    public Mono<Void> save(Long publicacionId, UUID usuarioId, String userJwt) {
+    public Mono<Void> save(Long publicacionId, UUID usuarioId) {
         Like like = new Like();
         like.setPublicacionId(publicacionId);
         like.setUsuarioId(usuarioId);
-        return userClient(userJwt).post()
+        return serviceClient.post()
                 .uri("/likes")
                 .bodyValue(like)
                 .retrieve()
@@ -41,8 +41,8 @@ public class LikeRepository extends SupabaseRepository {
                 .then();
     }
 
-    public Mono<Void> delete(Long publicacionId, UUID usuarioId, String userJwt) {
-        return userClient(userJwt).delete()
+    public Mono<Void> delete(Long publicacionId, UUID usuarioId) {
+        return serviceClient.delete()
                 .uri(u -> u.path("/likes")
                         .queryParam("publicacion_id", "eq." + publicacionId)
                         .queryParam("usuario_id", "eq." + usuarioId)

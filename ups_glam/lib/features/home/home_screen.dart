@@ -1,19 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_theme.dart';
 import '../feed/feed_screen.dart';
 import '../profile/profile_screen.dart';
 import '../search/search_screen.dart';
 import '../upload/upload_screen.dart';
 
-class HomeScreen extends StatefulWidget {
+final homeTabProvider = StateProvider<int>((ref) => 0);
+
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  int _tab = 0;
 
   static const _screens = [
     FeedScreen(),
@@ -23,26 +19,28 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tab = ref.watch(homeTabProvider);
     return Scaffold(
-      body: IndexedStack(index: _tab, children: _screens),
+      body: IndexedStack(index: tab, children: _screens),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: AppTheme.white,
           border: Border(top: BorderSide(color: AppTheme.inputBorder, width: 0.5)),
         ),
         child: NavigationBar(
-          selectedIndex: _tab,
-          onDestinationSelected: (i) => setState(() => _tab = i),
+          selectedIndex: tab,
+          onDestinationSelected: (i) =>
+              ref.read(homeTabProvider.notifier).state = i,
           destinations: [
             NavigationDestination(
-              icon: Icon(_tab == 0 ? Icons.home : Icons.home_outlined),
+              icon: Icon(tab == 0 ? Icons.home : Icons.home_outlined),
               label: 'Inicio',
             ),
             NavigationDestination(
               icon: Icon(
-                _tab == 1 ? Icons.search : Icons.search_outlined,
-                color: _tab == 1 ? AppTheme.navy : null,
+                tab == 1 ? Icons.search : Icons.search_outlined,
+                color: tab == 1 ? AppTheme.navy : null,
               ),
               label: 'Buscar',
             ),
@@ -50,22 +48,22 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Container(
                 padding: const EdgeInsets.all(7),
                 decoration: BoxDecoration(
-                  gradient: _tab == 2 ? AppTheme.upsGradient : null,
-                  border: _tab == 2
+                  gradient: tab == 2 ? AppTheme.upsGradient : null,
+                  border: tab == 2
                       ? null
                       : Border.all(color: AppTheme.textPrimary, width: 1.8),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
                   Icons.add,
-                  color: _tab == 2 ? AppTheme.gold : AppTheme.textPrimary,
+                  color: tab == 2 ? AppTheme.gold : AppTheme.textPrimary,
                   size: 20,
                 ),
               ),
               label: 'Subir',
             ),
             NavigationDestination(
-              icon: Icon(_tab == 3 ? Icons.person : Icons.person_outline),
+              icon: Icon(tab == 3 ? Icons.person : Icons.person_outline),
               label: 'Perfil',
             ),
           ],

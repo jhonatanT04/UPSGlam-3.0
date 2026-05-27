@@ -46,13 +46,18 @@ public class PublicacionRepository extends SupabaseRepository {
                 .bodyToFlux(Publicacion.class);
     }
 
-    /** Crear publicación (requiere JWT del usuario para RLS). */
-    public Mono<Publicacion> save(Publicacion publicacion, String userJwt) {
-        return userClient(userJwt).post()
-                .uri("/publicaciones")
+    /** Crear publicación usando service key (usuario_id viene del JWT extraído server-side). */
+    public Mono<Publicacion> save(Publicacion publicacion) {
+        log.info("Saving publicacion: usuario_id={}, imagen_url={}", publicacion.getUsuarioId(), publicacion.getImagenUrl());
+        return serviceClient.post()
+                .uri(URI.create(supabaseUrl + "/rest/v1/publicaciones"))
                 .header("Prefer", "return=representation")
                 .bodyValue(publicacion)
                 .retrieve()
+                .onStatus(status -> !status.is2xxSuccessful(), response ->
+                        response.bodyToMono(String.class)
+                                .doOnNext(body -> log.error("Supabase publicaciones error {}: {}", response.statusCode(), body))
+                                .flatMap(body -> Mono.error(new RuntimeException("Supabase error " + response.statusCode() + ": " + body))))
                 .bodyToFlux(Publicacion.class)
                 .next();
     }

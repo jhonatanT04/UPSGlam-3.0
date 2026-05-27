@@ -69,7 +69,6 @@ public class FeedService {
 
     public Mono<PublicacionResponse> createPublicacion(PublicacionRequest req, String bearerHeader) {
         UUID userId = JwtUtils.extractUserId(bearerHeader);
-        String jwt  = JwtUtils.extractToken(bearerHeader);
 
         Publicacion p = new Publicacion();
         p.setUsuarioId(userId);
@@ -78,7 +77,7 @@ public class FeedService {
         p.setDescripcion(req.getDescripcion());
 
         return Mono.zip(
-                publicacionRepo.save(p, jwt),
+                publicacionRepo.save(p),
                 perfilRepo.findById(userId)
         ).map(t -> {
             t.getT1().setPerfiles(t.getT2());
@@ -91,17 +90,15 @@ public class FeedService {
 
     public Mono<Void> addLike(Long publicacionId, String bearerHeader) {
         UUID userId = JwtUtils.extractUserId(bearerHeader);
-        String jwt  = JwtUtils.extractToken(bearerHeader);
         return likeRepo.exists(publicacionId, userId)
                 .flatMap(exists -> exists
                         ? Mono.empty()
-                        : likeRepo.save(publicacionId, userId, jwt));
+                        : likeRepo.save(publicacionId, userId));
     }
 
     public Mono<Void> removeLike(Long publicacionId, String bearerHeader) {
         UUID userId = JwtUtils.extractUserId(bearerHeader);
-        String jwt  = JwtUtils.extractToken(bearerHeader);
-        return likeRepo.delete(publicacionId, userId, jwt);
+        return likeRepo.delete(publicacionId, userId);
     }
 
     private PublicacionResponse toResponse(Publicacion p,
