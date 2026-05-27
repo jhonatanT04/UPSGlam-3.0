@@ -83,15 +83,30 @@ class ApiService {
 
   // ── Feed ─────────────────────────────────────────────
   Future<List<Post>> getFeed() async {
-    // TODO: GET $baseUrl/api/v1/feed
-    await Future.delayed(const Duration(milliseconds: 600));
-    return _mockPosts();
+    final res = await http.get(
+      Uri.parse('$baseUrl/api/v1/feed'),
+      headers: headers,
+    );
+    if (res.statusCode != 200) throw Exception(_extractError(res.body));
+    final list = jsonDecode(res.body) as List<dynamic>;
+    return list
+        .map((e) => Post.fromPerfilJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   // ── Likes ─────────────────────────────────────────────
-  Future<void> toggleLike(String postId) async {
-    // TODO: POST $baseUrl/api/v1/publicaciones/$postId/like
-    await Future.delayed(const Duration(milliseconds: 150));
+  Future<void> toggleLike(String postId, {required bool currentlyLiked}) async {
+    if (currentlyLiked) {
+      await http.delete(
+        Uri.parse('$baseUrl/api/v1/publicaciones/$postId/like'),
+        headers: headers,
+      );
+    } else {
+      await http.post(
+        Uri.parse('$baseUrl/api/v1/publicaciones/$postId/like'),
+        headers: headers,
+      );
+    }
   }
 
   // ── Comments ──────────────────────────────────────────
@@ -119,19 +134,16 @@ class ApiService {
     required String imageUrl,
     String? caption,
   }) async {
-    // TODO: POST $baseUrl/api/v1/publicaciones
-    await Future.delayed(const Duration(milliseconds: 400));
-    return Post(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      userId: 'me',
-      username: 'yo',
-      imageUrl: imageUrl,
-      caption: caption,
-      likesCount: 0,
-      commentsCount: 0,
-      isLiked: false,
-      createdAt: DateTime.now(),
+    final body = <String, dynamic>{'imagen_url': imageUrl};
+    if (caption != null && caption.isNotEmpty) body['descripcion'] = caption;
+
+    final res = await http.post(
+      Uri.parse('$baseUrl/api/v1/publicaciones'),
+      headers: headers,
+      body: jsonEncode(body),
     );
+    if (res.statusCode != 201) throw Exception(_extractError(res.body));
+    return Post.fromPerfilJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
 
   // ── Perfil ────────────────────────────────────────────
@@ -202,52 +214,6 @@ class ApiService {
 }
 
 // ── Mock data ─────────────────────────────────────────
-List<Post> _mockPosts() => [
-      Post(
-        id: '1',
-        userId: 'user1',
-        username: 'maria_ups',
-        imageUrl: 'https://picsum.photos/seed/ups1/600/600',
-        caption: 'Filtro emboss en la práctica de CUDA #UPSGlam',
-        likesCount: 24,
-        commentsCount: 3,
-        isLiked: false,
-        createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-      ),
-      Post(
-        id: '2',
-        userId: 'user2',
-        username: 'jhon_dev',
-        imageUrl: 'https://picsum.photos/seed/ups2/600/600',
-        caption: 'Motion blur con tamaño de filtro 125 🔥',
-        likesCount: 41,
-        commentsCount: 7,
-        isLiked: true,
-        createdAt: DateTime.now().subtract(const Duration(hours: 5)),
-      ),
-      Post(
-        id: '3',
-        userId: 'user3',
-        username: 'sofia_parallel',
-        imageUrl: 'https://picsum.photos/seed/ups3/600/600',
-        caption: 'Nitidez al máximo, GPU procesando en 12ms',
-        likesCount: 18,
-        commentsCount: 2,
-        isLiked: false,
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-      ),
-      Post(
-        id: '4',
-        userId: 'user1',
-        username: 'maria_ups',
-        imageUrl: 'https://picsum.photos/seed/ups4/600/600',
-        caption: null,
-        likesCount: 9,
-        commentsCount: 0,
-        isLiked: false,
-        createdAt: DateTime.now().subtract(const Duration(days: 2)),
-      ),
-    ];
 
 List<Comment> _mockComments(String postId) => [
       Comment(

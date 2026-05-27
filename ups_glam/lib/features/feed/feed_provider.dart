@@ -16,13 +16,28 @@ class FeedNotifier extends AsyncNotifier<List<Post>> {
     final posts = state.valueOrNull ?? [];
     final idx = posts.indexWhere((p) => p.id == postId);
     if (idx == -1) return;
+
     final post = posts[idx];
-    final updated = post.copyWith(
-      isLiked: !post.isLiked,
-      likesCount: post.isLiked ? post.likesCount - 1 : post.likesCount + 1,
-    );
-    state = AsyncData([...posts]..[idx] = updated);
-    await ref.read(apiServiceProvider).toggleLike(postId);
+    // Actualización optimista
+    state = AsyncData([...posts]
+      ..[idx] = post.copyWith(
+        isLiked: !post.isLiked,
+        likesCount:
+            post.isLiked ? post.likesCount - 1 : post.likesCount + 1,
+      ));
+
+    try {
+      await ref
+          .read(apiServiceProvider)
+          .toggleLike(postId, currentlyLiked: post.isLiked);
+    } catch (_) {
+      // Revertir si el API falla
+      final current = state.valueOrNull ?? [];
+      final revertIdx = current.indexWhere((p) => p.id == postId);
+      if (revertIdx >= 0) {
+        state = AsyncData([...current]..[revertIdx] = post);
+      }
+    }
   }
 
   Future<void> addNewPost(Post post) async {

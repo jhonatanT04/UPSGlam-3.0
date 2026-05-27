@@ -57,7 +57,14 @@ public class PerfilService {
                         seguidores, seguidos));
             }
 
-            List<Long> ids = posts.stream().map(Publicacion::getId).toList();
+            List<Long> ids = posts.stream().map(Publicacion::getId)
+                    .filter(java.util.Objects::nonNull).toList();
+
+            if (ids.isEmpty()) {
+                return Mono.just(buildResponse(perfil, posts,
+                        Collections.emptyMap(), Collections.emptyMap(),
+                        seguidores, seguidos));
+            }
 
             return Mono.zip(
                     publicacionRepo.countLikesByIds(ids),
@@ -84,8 +91,8 @@ public class PerfilService {
                         .imagenUrl(p.getImagenUrl())
                         .imagenOriginalUrl(p.getImagenOriginalUrl())
                         .descripcion(p.getDescripcion())
-                        .likesCount(likes.getOrDefault(p.getId(), 0L))
-                        .comentariosCount(comentarios.getOrDefault(p.getId(), 0L))
+                        .likesCount(p.getId() != null ? likes.getOrDefault(p.getId(), 0L) : 0L)
+                        .comentariosCount(p.getId() != null ? comentarios.getOrDefault(p.getId(), 0L) : 0L)
                         .isLiked(false)
                         .creadoEn(p.getCreadoEn())
                         .build())

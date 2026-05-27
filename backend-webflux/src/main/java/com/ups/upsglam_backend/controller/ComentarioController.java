@@ -32,12 +32,4 @@ public class ComentarioController {
             @RequestHeader("Authorization") String bearer) {
         return comentarioService.addComentario(publicacionId, req, bearer);
     }
-
-    @PostMapping("/like")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public Mono<Void> toggleLike(
-            @PathVariable Long publicacionId,
-            @RequestHeader("Authorization") String bearer) {
-        return comentarioService.toggleLike(publicacionId, bearer);
-    }
 }
