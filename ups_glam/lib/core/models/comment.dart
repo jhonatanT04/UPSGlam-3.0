@@ -18,12 +18,14 @@ class Comment {
   });
 
   factory Comment.fromJson(Map<String, dynamic> j) => Comment(
-        id: j['id'] as String,
-        postId: j['post_id'] as String,
-        userId: j['user_id'] as String,
-        username: j['username'] as String,
+        id: j['id']?.toString() ?? '',
+        postId: j['publicacion_id']?.toString() ?? '',
+        userId: j['usuario_id'] as String? ?? '',
+        username: j['username'] as String? ?? '',
         avatarUrl: j['avatar_url'] as String?,
-        content: j['content'] as String,
-        createdAt: DateTime.parse(j['created_at'] as String),
+        content: j['texto'] as String? ?? '',
+        createdAt: j['creado_en'] != null
+            ? DateTime.parse(j['creado_en'] as String)
+            : DateTime.now(),
       );
 }

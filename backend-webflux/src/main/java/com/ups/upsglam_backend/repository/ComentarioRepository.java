@@ -24,13 +24,11 @@ public class ComentarioRepository extends SupabaseRepository {
     }
 
     public Flux<Comentario> findByPublicacionId(Long publicacionId) {
-        // Usa FK explícita para evitar ambigüedad PGRST201 (hay dos FK de comentarios→perfiles)
         return serviceClient.get()
-                .uri(u -> u.path("/comentarios")
-                        .queryParam("select", "*,perfiles!comentarios_usuario_id_fkey(id,username,avatar_url)")
-                        .queryParam("publicacion_id", "eq." + publicacionId)
-                        .queryParam("order", "creado_en.asc")
-                        .build())
+                .uri(URI.create(supabaseUrl
+                        + "/rest/v1/comentarios?select=*,perfiles!comentarios_usuario_id_fkey(id,username,avatar_url)"
+                        + "&publicacion_id=eq." + publicacionId
+                        + "&order=creado_en.asc"))
                 .retrieve()
                 .bodyToFlux(Comentario.class);
     }

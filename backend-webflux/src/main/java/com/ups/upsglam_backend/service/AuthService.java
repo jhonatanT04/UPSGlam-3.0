@@ -160,6 +160,7 @@ public class AuthService {
                 .header("Authorization", "Bearer " + userJwt)
                 .retrieve()
                 .toBodilessEntity()
-                .then();
+                .then()
+                .onErrorResume(e -> Mono.empty());
     }
 }

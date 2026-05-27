@@ -111,22 +111,25 @@ class ApiService {
 
   // ── Comments ──────────────────────────────────────────
   Future<List<Comment>> getComments(String postId) async {
-    // TODO: GET $baseUrl/api/v1/publicaciones/$postId/comentarios
-    await Future.delayed(const Duration(milliseconds: 400));
-    return _mockComments(postId);
+    final res = await http.get(
+      Uri.parse('$baseUrl/api/v1/publicaciones/$postId/comentarios'),
+      headers: headers,
+    );
+    if (res.statusCode != 200) throw Exception(_extractError(res.body));
+    final list = jsonDecode(res.body) as List<dynamic>;
+    return list
+        .map((e) => Comment.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<Comment> addComment(String postId, String content) async {
-    // TODO: POST $baseUrl/api/v1/publicaciones/$postId/comentarios
-    await Future.delayed(const Duration(milliseconds: 300));
-    return Comment(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      postId: postId,
-      userId: 'me',
-      username: 'yo',
-      content: content,
-      createdAt: DateTime.now(),
+    final res = await http.post(
+      Uri.parse('$baseUrl/api/v1/publicaciones/$postId/comentarios'),
+      headers: headers,
+      body: jsonEncode({'texto': content}),
     );
+    if (res.statusCode != 201) throw Exception(_extractError(res.body));
+    return Comment.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
 
   // ── Posts ─────────────────────────────────────────────
@@ -213,23 +216,3 @@ class ApiService {
   }
 }
 
-// ── Mock data ─────────────────────────────────────────
-
-List<Comment> _mockComments(String postId) => [
-      Comment(
-        id: 'c1',
-        postId: postId,
-        userId: 'user2',
-        username: 'jhon_dev',
-        content: 'Qué buen resultado con ese filtro!',
-        createdAt: DateTime.now().subtract(const Duration(hours: 1)),
-      ),
-      Comment(
-        id: 'c2',
-        postId: postId,
-        userId: 'user3',
-        username: 'sofia_parallel',
-        content: 'Cuánto tiempo tardó la GPU en procesar?',
-        createdAt: DateTime.now().subtract(const Duration(minutes: 30)),
-      ),
-    ];

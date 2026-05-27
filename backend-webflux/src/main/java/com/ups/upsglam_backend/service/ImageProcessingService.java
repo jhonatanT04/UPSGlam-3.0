@@ -8,6 +8,7 @@ import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
@@ -17,7 +18,13 @@ public class ImageProcessingService {
     private final WebClient webClient;
 
     public ImageProcessingService(@Value("${PYTHON_SERVICE_URL:http://localhost:8000}") String pythonServiceUrl) {
-        this.webClient = WebClient.builder().baseUrl(pythonServiceUrl).build();
+        ExchangeStrategies strategies = ExchangeStrategies.builder()
+                .codecs(config -> config.defaultCodecs().maxInMemorySize(20 * 1024 * 1024))
+                .build();
+        this.webClient = WebClient.builder()
+                .baseUrl(pythonServiceUrl)
+                .exchangeStrategies(strategies)
+                .build();
     }
 
     public Mono<GpuProcessResponse> procesarImagenEnGpu(String filterName, int filterSize, FilePart filePart) {
